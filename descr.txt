@@ -1,0 +1,56 @@
+1) All tickers list on TQBR board
+http://iss.moex.com/iss/history/engines/stock/markets/shares/boards/TQBR/securities.xml
+http://iss.moex.com/iss/history/engines/stock/markets/shares/boards/TQBR/securities.json
+http://iss.moex.com/iss/history/engines/stock/markets/shares/boards/TQBR/securities.json?iss.meta=off
+http://iss.moex.com/iss/history/engines/stock/markets/shares/boards/TQBR/securities.xml?iss.meta=off
+http://iss.moex.com/iss/history/engines/stock/markets/shares/boards/TQBR/securities.xml?iss.meta=off&history.columns=BOARDID,TRADEDATE,SHORTNAME,SECID,NUMTRADES,VALUE,VOLUME&start=100
+
+
+2) Single ticker candles (без указания параметра start будет получать с самого начала)
+http://iss.moex.com/iss/history/engines/stock/markets/shares/boards/TQBR/securities/SBER.json
+http://iss.moex.com/iss/history/engines/stock/markets/shares/boards/TQBR/securities/sber?start=100
+http://iss.moex.com/iss/history/engines/stock/markets/shares/boards/TQBR/securities/sber?start=200
+http://iss.moex.com/iss/history/engines/stock/markets/shares/boards/TQBR/securities/gazp?sort_order=desc
+http://iss.moex.com/iss/history/engines/stock/markets/shares/boards/TQBR/securities/gazp.xml?sort_order=desc&history.columns=TRADEDATE,OPEN,HIGH,LOW,CLOSE,VOLUME
+
+3) Single ticker by dates
+http://iss.moex.com/iss/history/engines/stock/markets/shares/boards/TQBR/securities/SBER.json?from=2021-11-18&till=2021-11-25
+
+borders (GET)
+
+
+Параметры
+
+        session – Сессия интернет соединения.
+
+        security – Тикер ценной бумаги.
+
+        market – Рынок - по умолчанию акции.
+
+        engine – Движок - по умолчанию акции
+        
+        
+/iss/engines/[engine]/markets/[market]/securities/[security]/candleborders
+        
+-- Дока        
+http://iss.moex.com/iss/reference
+
+-- Список engines
+https://iss.moex.com/iss/engines.xml
+
+-- Список markets
+https://iss.moex.com/iss/engines/[engine]/markets.xml
+(https://iss.moex.com/iss/engines/stock/markets.xml)
+
+-- Список всех тикеров
+https://iss.moex.com/iss/index
+
+-- Поиск тикера
+https://iss.moex.com/iss/securities.xml?q=AAPL
+
+
+common_share
+
+
+https://www.youtube.com/watch?v=i39BM-dtd3c
+https://www.youtube.com/watch?v=2ZWYnSryU9c&t=43s

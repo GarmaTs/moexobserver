@@ -27,12 +27,12 @@ type TickerName struct {
 	Volume    int64
 }
 
-func GetTickerList(in io.Reader) (error, []TickerName) {
+func GetTickerList(in io.Reader) ([]TickerName, error) {
 	var key documentTickerList
 	decodeXML := xml.NewDecoder(in)
 	err := decodeXML.Decode(&key)
 	if err != nil {
-		return err, nil
+		return nil, err
 	}
 
 	var tickers []TickerName
@@ -42,11 +42,11 @@ func GetTickerList(in io.Reader) (error, []TickerName) {
 		}
 		tradeDate, err := time.Parse("2006-01-02", row.Tradedate)
 		if err != nil {
-			return err, nil
+			return nil, err
 		}
 		vol, err := strconv.ParseInt(row.Volume, 10, 64)
 		if err != nil {
-			return err, nil
+			return nil, err
 		}
 
 		ticker := TickerName{
@@ -59,5 +59,5 @@ func GetTickerList(in io.Reader) (error, []TickerName) {
 		tickers = append(tickers, ticker)
 	}
 
-	return nil, tickers
+	return tickers, nil
 }
