@@ -1,3 +1,3 @@
-module proj_moex
+module moexobserver
 
 go 1.19

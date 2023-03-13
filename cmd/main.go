@@ -2,8 +2,9 @@ package main
 
 import (
 	"fmt"
+	"moexobserver/internal/moex/moexreader"
+	"moexobserver/internal/moex/tickers"
 	"os"
-	"proj_moex/internal/tickers"
 )
 
 func main() {
@@ -14,7 +15,7 @@ func main() {
 	}
 
 	filename := arguments[1]
-	reader, err := os.Open(filename)
+	reader, err := moexreader.GetXMLTickersFromFile(filename)
 	if err != nil {
 		fmt.Println(err)
 		return
