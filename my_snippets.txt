@@ -1,0 +1,5 @@
+1) Create migration
+migrate create -seq -ext=.sql -dir=./migrations create_tickers_table
+
+2) Execute migration
+migrate -path=./migrations -database="db_dsn" up
