@@ -1,7 +1,11 @@
 package main
 
 import (
+	"context"
+	"database/sql"
 	"fmt"
+	"log"
+	"moexobserver/internal/config"
 	"moexobserver/internal/moex/moexreader"
 	"moexobserver/internal/moex/tickers"
 	"time"
@@ -9,7 +13,40 @@ import (
 
 const TICKERS_URL = "http://iss.moex.com/iss/history/engines/stock/markets/shares/boards/TQBR/securities.xml?iss.meta=off&history.columns=BOARDID,TRADEDATE,SHORTNAME,SECID,NUMTRADES,VALUE,VOLUME"
 
+func openDB(cfg *config.Config) (*sql.DB, error) {
+	db, err := sql.Open("postgres", cfg.Db.Dsn)
+	if err != nil {
+		return nil, err
+	}
+
+	db.SetMaxOpenConns(cfg.Db.MaxOpenConns)
+	db.SetMaxIdleConns(cfg.Db.MaxIdleConns)
+	duration, err := time.ParseDuration(cfg.Db.MaxIdleTime)
+	if err != nil {
+		return nil, err
+	}
+	db.SetConnMaxIdleTime(duration)
+
+	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+	defer cancel()
+
+	err = db.PingContext(ctx)
+	if err != nil {
+		return nil, err
+	}
+
+	return db, err
+}
+
 func main() {
+	cfg, err := config.ReadConf("./config/config.yaml")
+	if err != nil {
+		log.Fatal(err)
+	}
+	fmt.Println(cfg)
+
+	return
+
 	chanTickers := make(chan []tickers.TickerName)
 	timerForTickers := time.NewTicker(1 * time.Second)
 
