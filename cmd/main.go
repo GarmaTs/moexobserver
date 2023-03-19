@@ -6,6 +6,8 @@ import (
 	"fmt"
 	"log"
 	"moexobserver/internal/config"
+	"moexobserver/internal/data"
+	"moexobserver/internal/models"
 	"moexobserver/internal/moex/moexreader"
 	"moexobserver/internal/moex/tickers"
 	"os"
@@ -29,10 +31,11 @@ func main() {
 		logger.Fatal(err)
 	}
 	fmt.Println(db)
-	return
 
-	chanTickers := make(chan []tickers.TickerName)
+	chanTickers := make(chan []models.Ticker)
 	timerForTickers := time.NewTicker(1 * time.Second)
+
+	store := data.NewStore(db)
 
 	for {
 		select {
@@ -42,7 +45,10 @@ func main() {
 		// Чтение из канала тикеров
 		case tickers, ok := <-chanTickers:
 			if ok {
-				go ProceedAllTickers(tickers)
+				timerForTickers = time.NewTicker(10 * time.Second)
+				//go ProceedAllTickers(tickers)
+				//go store.Insert(tickers)
+				go store.Tickers.Insert(tickers)
 			}
 		}
 	}
@@ -102,22 +108,22 @@ func openDB(cfg *config.Config) (*sql.DB, error) {
 	return db, err
 }
 
-func ProceedAllTickers(tickers []tickers.TickerName) {
+func ProceedAllTickers(tickers []models.Ticker) {
 	// for _, row := range tickers {
 	// 	fmt.Println(row.Secid, row.Boardid, row.Tradedate, row.Volume)
 	// }
 	fmt.Println("len(tickers)=", len(tickers))
 	fmt.Println(time.Now())
+
+	//data.Store.Insert(tickers)
 }
 
-func WriteAllTickersToChan(srcUrl string, start int, c chan<- []tickers.TickerName) {
-	var allTickers []tickers.TickerName
+func WriteAllTickersToChan(srcUrl string, start int, c chan<- []models.Ticker) {
+	var allTickers []models.Ticker
 
 	bRun := true
 	for bRun {
 		url := fmt.Sprintf("%s&start=%d", srcUrl, start)
-		start += 100
-
 		reader, err := moexreader.GetXMLTickerByRequest(url)
 		if err != nil {
 			return
@@ -133,12 +139,14 @@ func WriteAllTickersToChan(srcUrl string, start int, c chan<- []tickers.TickerNa
 		if len(tickerSlice) == 0 || start > 10000 {
 			bRun = false
 		}
+
+		start += 100
 	}
 	c <- allTickers
 }
 
-func GetAllTickers(srcUrl string, start int) ([]tickers.TickerName, error) {
-	var allTickers []tickers.TickerName
+func GetAllTickers(srcUrl string, start int) ([]models.Ticker, error) {
+	var allTickers []models.Ticker
 
 	bRun := true
 	for bRun {
