@@ -1,9 +1,8 @@
-create table public.tickers (
-	id bigserial primary key,
+create table public.tickers (	
 	secid     text,
 	shortname text,
 	boardid   text,
 	Tradedate timestamp,
 	Volume    bigint,
-	unique (secid, boardid)
+	primary key (secid, boardid)
 );
