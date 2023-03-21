@@ -32,8 +32,8 @@ func main() {
 	}
 	fmt.Println(db)
 
-	chanTickers := make(chan []models.Ticker)
-	timerForTickers := time.NewTicker(1 * time.Second)
+	chanTickers := make(chan []models.Ticker, 1)
+	timerForTickers := time.NewTicker(2 * time.Second)
 
 	store := data.NewStore(db)
 

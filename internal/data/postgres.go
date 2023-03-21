@@ -24,21 +24,46 @@ type tickersModel struct {
 }
 
 func (m tickersModel) Insert(tickers []models.Ticker) {
-	query := `delete from public.tickers_import;
-		insert into public.tickers_import (secid, shortname, boardid, tradedate, volume)
-		values `
-	var tmpStr string
+	var tmpStr, subQuery string
 	for i, row := range tickers {
-		//fmt.Println(row.Secid, row.Shortname, row.Boardid, row.Tradedate, row.Volume)
 		if i == len(tickers)-1 {
-			tmpStr = fmt.Sprintf("('%s', '%s', '%s', '%s', %d)\n", row.Secid, row.Shortname, row.Boardid, row.Tradedate.Format("20060102"), row.Volume)
+			tmpStr = fmt.Sprintf("('%s', '%s', '%s', '%s', %d)\n",
+				row.Secid, row.Shortname, row.Boardid, row.Tradedate.Format("20060102"), row.Volume)
 		} else {
-			tmpStr = fmt.Sprintf("('%s', '%s', '%s', '%s', %d),\n", row.Secid, row.Shortname, row.Boardid, row.Tradedate.Format("20060102"), row.Volume)
+			tmpStr = fmt.Sprintf("('%s', '%s', '%s', '%s', %d),\n",
+				row.Secid, row.Shortname, row.Boardid, row.Tradedate.Format("20060102"), row.Volume)
 		}
-		query += tmpStr
+		subQuery += tmpStr
 	}
+
+	query := `
+delete from public.tickers_import;
+insert into public.tickers_import (secid, shortname, boardid, tradedate, volume)
+values ` + subQuery + `;
+
+update public.tickers a
+	set shortname = i.shortname,
+		tradedate = i.tradedate,
+		volume = i.volume
+from public.tickers t	
+inner join public.tickers_import i on i.secid = t.secid and i.boardid = t.boardid
+where
+	a.id = t.id;
+	
+insert into public.tickers
+	(secid, shortname, boardid, tradedate, volume)
+select 
+	i.secid, i.shortname, i.boardid, i.tradedate, i.volume
+from public.tickers_import as i
+where
+	not exists (
+		select 1 from public.tickers as t
+		where t.secid = i.secid and t.boardid = i.boardid
+	);
+
+delete from public.tickers_import;`
 
 	m.DB.Exec(query)
 
-	fmt.Println(len(tickers))
+	fmt.Println("tickers updated")
 }
