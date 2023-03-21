@@ -8,6 +8,7 @@ import (
 	"moexobserver/internal/config"
 	"moexobserver/internal/data"
 	"moexobserver/internal/models"
+	"moexobserver/internal/moex/dailyprices"
 	"moexobserver/internal/moex/moexreader"
 	"moexobserver/internal/moex/tickers"
 	"os"
@@ -18,7 +19,27 @@ import (
 
 const TICKERS_URL = "http://iss.moex.com/iss/history/engines/stock/markets/shares/boards/TQBR/securities.xml?iss.meta=off&history.columns=BOARDID,TRADEDATE,SHORTNAME,SECID,NUMTRADES,VALUE,VOLUME"
 
+// Получение ohlc для одного тикера
+func FillDailyPricesChan(c chan<- []models.DailyPrice, ticker models.Ticker) {
+	// Функция получает данные без старта. Это нужно доделать
+	dpUrl := "http://iss.moex.com/iss/history/engines/stock/markets/shares/boards/" + ticker.Boardid +
+		"/securities/" + ticker.Secid +
+		".xml?iss.meta=off&history.columns=TRADEDATE,OPEN,HIGH,LOW,CLOSE,VOLUME"
+
+	reader, err := moexreader.GetXMLByRequest(dpUrl)
+	if err != nil {
+		fmt.Println("err:", err)
+	}
+	dailyPrices, err := dailyprices.GetDailyPrices(reader, int32(ticker.Id))
+	if err != nil {
+		fmt.Println("err:", err)
+	}
+
+	c <- dailyPrices
+}
+
 func main() {
+	minDate, _ := time.Parse("2006-01-02", "1900-01-01")
 	cfg, err := config.ReadConf("./config/config.yaml")
 	if err != nil {
 		log.Fatal(err)
@@ -32,9 +53,16 @@ func main() {
 	}
 	fmt.Println(db)
 
-	chanTickers := make(chan []models.Ticker, 1)
+	// Канал и таймер для обновления списка тикеров
+	chanTickers := make(chan []models.Ticker)
 	timerForTickers := time.NewTicker(2 * time.Second)
 
+	// Канал и таймер для получения последней даты каждого тикера
+	chanLastTradeDates := make(chan models.Ticker)
+	timerForLastTradeDates := time.NewTicker(2 * time.Second)
+
+	// Канал для ohlc
+	chanDailyPrices := make(chan []models.DailyPrice, 20)
 	store := data.NewStore(db)
 
 	for {
@@ -45,27 +73,38 @@ func main() {
 		// Чтение из канала тикеров
 		case tickers, ok := <-chanTickers:
 			if ok {
-				timerForTickers = time.NewTicker(10 * time.Second)
-				//go ProceedAllTickers(tickers)
-				//go store.Insert(tickers)
+				timerForTickers = time.NewTicker(100 * time.Second)
 				go store.Tickers.Insert(tickers)
 			}
+		// Запись последних дат для всех тикеров в канал
+		case <-timerForLastTradeDates.C:
+			go GetLastTradeDates(chanLastTradeDates, &store)
+		// Получение последней даты тикера из канала
+		case lastTickersDate, ok := <-chanLastTradeDates:
+			if ok {
+				if lastTickersDate.Tradedate.Before(minDate) {
+					// РЕАЛИЗОВАТЬ полную вставку
+					fmt.Println("Need full insert for", lastTickersDate.Id)
+				} else {
+					// Получение ohlc тикера
+					go FillDailyPricesChan(chanDailyPrices, lastTickersDate)
+				}
+			}
+		// Получение ohlc из канала
+		case dailyPrices, ok := <-chanDailyPrices:
+			if ok {
+				for _, p := range dailyPrices {
+					fmt.Println(p)
+				}
+				fmt.Println("----------------------------------------------------------------------")
+			}
 		}
+
 	}
-
-	// tickers, err := GetAllTickers(TICKERS_URL, 0)
-	// if err != nil {
-	// 	fmt.Println(err)
-	// }
-	// for _, row := range tickers {
-	// 	fmt.Println(row.Secid, row.Boardid, row.Tradedate, row.Volume)
-	// }
-
-	return
 
 	//	XML FROM FILE
 	// filename := "tickers.xml"
-	// reader, err := moexreader.GetXMLTickersFromFile(filename)
+	// reader, err := moexreader.GetXMLFromFile(filename)
 	// if err != nil {
 	// 	fmt.Println(err)
 	// 	return
@@ -81,6 +120,13 @@ func main() {
 	// for _, row := range tickers {
 	// 	fmt.Println(row.Secid, row.Boardid, row.Tradedate, row.Volume)
 	// }
+}
+
+func GetLastTradeDates(c chan<- models.Ticker, store *data.Store) {
+	lastTradeDates := store.DailyPrices.GetLastTradeDates()
+	for _, lastDate := range lastTradeDates {
+		c <- lastDate
+	}
 }
 
 func openDB(cfg *config.Config) (*sql.DB, error) {
@@ -124,7 +170,7 @@ func WriteAllTickersToChan(srcUrl string, start int, c chan<- []models.Ticker) {
 	bRun := true
 	for bRun {
 		url := fmt.Sprintf("%s&start=%d", srcUrl, start)
-		reader, err := moexreader.GetXMLTickerByRequest(url)
+		reader, err := moexreader.GetXMLByRequest(url)
 		if err != nil {
 			return
 		}
@@ -153,7 +199,7 @@ func GetAllTickers(srcUrl string, start int) ([]models.Ticker, error) {
 		url := fmt.Sprintf("%s&start=%d", srcUrl, start)
 		start += 100
 
-		reader, err := moexreader.GetXMLTickerByRequest(url)
+		reader, err := moexreader.GetXMLByRequest(url)
 		if err != nil {
 			return nil, err
 		}

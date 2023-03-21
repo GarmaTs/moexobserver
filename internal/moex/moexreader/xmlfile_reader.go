@@ -4,7 +4,7 @@ import (
 	"os"
 )
 
-func GetXMLTickersFromFile(filename string) (*os.File, error) {
+func GetXMLFromFile(filename string) (*os.File, error) {
 	reader, err := os.Open(filename)
 	if err != nil {
 		return nil, err

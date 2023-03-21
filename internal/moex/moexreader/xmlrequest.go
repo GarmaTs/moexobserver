@@ -8,7 +8,7 @@ import (
 	"net/http"
 )
 
-func GetXMLTickerByRequest(url string) (io.Reader, error) {
+func GetXMLByRequest(url string) (io.Reader, error) {
 	resp, err := http.Get(url)
 	if err != nil {
 		return nil, fmt.Errorf("GET error: %v", err)

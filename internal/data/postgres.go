@@ -3,19 +3,24 @@ package data
 import (
 	"database/sql"
 	"fmt"
+	"log"
 	"moexobserver/internal/models"
 )
 
-type store struct {
+type Store struct {
 	DB      *sql.DB
 	Tickers interface {
 		Insert([]models.Ticker)
 	}
+	DailyPrices interface {
+		GetLastTradeDates() []models.Ticker
+	}
 }
 
-func NewStore(db *sql.DB) store {
-	return store{DB: db,
-		Tickers: tickersModel{DB: db},
+func NewStore(db *sql.DB) Store {
+	return Store{DB: db,
+		Tickers:     tickersModel{DB: db},
+		DailyPrices: dailyPricesModel{DB: db},
 	}
 }
 
@@ -24,6 +29,7 @@ type tickersModel struct {
 }
 
 func (m tickersModel) Insert(tickers []models.Ticker) {
+	//truncate table public.tickers RESTART IDENTITY CASCADE;
 	var tmpStr, subQuery string
 	for i, row := range tickers {
 		if i == len(tickers)-1 {
@@ -63,7 +69,47 @@ where
 
 delete from public.tickers_import;`
 
-	m.DB.Exec(query)
+	_, err := m.DB.Exec(query)
+	if err != nil {
+		log.Fatal(err)
+	}
 
 	fmt.Println("tickers updated")
+}
+
+type dailyPricesModel struct {
+	DB *sql.DB
+}
+
+func (m dailyPricesModel) GetLastTradeDates() []models.Ticker {
+	var tickers []models.Ticker
+
+	query := `
+select
+	t.id as ticker_id, t.secid, t.boardid, COALESCE(p.tradedate, '1899-12-31')
+from (
+	select max(tradedate) as tradedate, p.ticker_id
+	from public.daily_prices as p
+	group by p.ticker_id
+) as p
+right join public.tickers t on t.id = p.ticker_id
+where id in (1,2)
+order by ticker_id;`
+
+	rows, err := m.DB.Query(query)
+	if err != nil {
+		log.Fatal(err)
+	}
+	defer rows.Close()
+
+	var t models.Ticker
+	for rows.Next() {
+		err := rows.Scan(&t.Id, &t.Secid, &t.Boardid, &t.Tradedate)
+		if err != nil {
+			log.Fatal(err)
+		}
+		tickers = append(tickers, t)
+	}
+
+	return tickers
 }
