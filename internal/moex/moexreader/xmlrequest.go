@@ -6,10 +6,20 @@ import (
 	"io"
 	"io/ioutil"
 	"net/http"
+	"time"
 )
 
-func GetXMLTickerByRequest(url string) (io.Reader, error) {
-	resp, err := http.Get(url)
+func GetXMLByRequest(url string) (io.Reader, error) {
+	// defer func() {
+	// 	if r := recover(); r != nil {
+	// 		fmt.Println("RECOVERED GetXMLByRequest, url:", url)
+	// 	}
+	// }()
+
+	client := http.Client{
+		Timeout: 2 * time.Second,
+	}
+	resp, err := client.Get(url)
 	if err != nil {
 		return nil, fmt.Errorf("GET error: %v", err)
 	}

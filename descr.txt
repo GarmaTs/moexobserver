@@ -11,6 +11,8 @@ http://iss.moex.com/iss/history/engines/stock/markets/shares/boards/TQBR/securit
 http://iss.moex.com/iss/history/engines/stock/markets/shares/boards/TQBR/securities/sber?start=100
 http://iss.moex.com/iss/history/engines/stock/markets/shares/boards/TQBR/securities/sber?start=200
 http://iss.moex.com/iss/history/engines/stock/markets/shares/boards/TQBR/securities/gazp?sort_order=desc
+http://iss.moex.com/iss/history/engines/stock/markets/shares/boards/TQBR/securities/gazp.xml?history.columns=TRADEDATE,OPEN,HIGH,LOW,CLOSE,VOLUME
+http://iss.moex.com/iss/history/engines/stock/markets/shares/boards/TQBR/securities/gazp.xml?iss.meta=off&history.columns=TRADEDATE,OPEN,HIGH,LOW,CLOSE,VOLUME
 http://iss.moex.com/iss/history/engines/stock/markets/shares/boards/TQBR/securities/gazp.xml?sort_order=desc&history.columns=TRADEDATE,OPEN,HIGH,LOW,CLOSE,VOLUME
 
 3) Single ticker by dates

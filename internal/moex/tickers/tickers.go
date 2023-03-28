@@ -3,6 +3,7 @@ package tickers
 import (
 	"encoding/xml"
 	"io"
+	"moexobserver/internal/models"
 	"strconv"
 	"time"
 )
@@ -19,15 +20,7 @@ type rowTickerList struct {
 	Volume    string `xml:"VOLUME,attr"`
 }
 
-type TickerName struct {
-	Secid     string
-	Shortname string
-	Boardid   string
-	Tradedate time.Time
-	Volume    int64
-}
-
-func GetTickerList(in io.Reader) ([]TickerName, error) {
+func GetTickerList(in io.Reader) ([]models.Ticker, error) {
 	var key documentTickerList
 	decodeXML := xml.NewDecoder(in)
 	err := decodeXML.Decode(&key)
@@ -35,7 +28,7 @@ func GetTickerList(in io.Reader) ([]TickerName, error) {
 		return nil, err
 	}
 
-	var tickers []TickerName
+	var tickers []models.Ticker
 	for _, row := range key.Rows {
 		if len(row.Secid) == 0 {
 			continue
@@ -49,7 +42,7 @@ func GetTickerList(in io.Reader) ([]TickerName, error) {
 			return nil, err
 		}
 
-		ticker := TickerName{
+		ticker := models.Ticker{
 			Secid:     row.Secid,
 			Shortname: row.Shortname,
 			Boardid:   row.Boardid,
