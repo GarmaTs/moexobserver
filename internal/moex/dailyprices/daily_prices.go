@@ -2,6 +2,7 @@ package dailyprices
 
 import (
 	"encoding/xml"
+	"fmt"
 	"io"
 	"moexobserver/internal/models"
 	"strconv"
@@ -22,6 +23,12 @@ type rowDailyPrice struct {
 }
 
 func GetDailyPrices(in io.Reader, tickerId int32) ([]models.DailyPrice, error) {
+	defer func() {
+		if r := recover(); r != nil {
+			fmt.Println("RECOVERED GetDailyPrices, tickerId:", tickerId)
+		}
+	}()
+
 	var key documentDailyPriceList
 	decodeXML := xml.NewDecoder(in)
 	err := decodeXML.Decode(&key)
@@ -59,9 +66,9 @@ func GetDailyPrices(in io.Reader, tickerId int32) ([]models.DailyPrice, error) {
 			Volume:    vol,
 		}
 
-		if open == 0 && close == 0 {
-			continue
-		}
+		// if open == 0 && close == 0 {
+		// 	continue
+		// }
 
 		dailyPrices = append(dailyPrices, price)
 	}

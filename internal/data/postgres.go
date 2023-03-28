@@ -94,7 +94,7 @@ from (
 	group by p.ticker_id
 ) as p
 right join public.tickers t on t.id = p.ticker_id
-where id in (1,2)
+--where t.id in (4)
 order by ticker_id;`
 
 	rows, err := m.DB.Query(query)
@@ -112,21 +112,49 @@ order by ticker_id;`
 		tickers = append(tickers, t)
 	}
 
+	if len(tickers) == 0 {
+		log.Println("GetLastTradeDates: no tickers")
+	}
 	return tickers
 }
 
 func (m dailyPricesModel) Insert(prices []models.DailyPrice) {
-	//fmt.Println(dailyPrices[0], "\n", len(dailyPrices))
-	query := `
-insert into public.daily_prices 
-	(ticker_id, tradedate, open, high, low, close, volume, lastcheck_date)
-values ($1, $2, $3, $4, $5, $6, $7, date(now()));`
-
-	args := []interface{}{prices[0].TickerId, prices[0].Tradedate, prices[0].Open, prices[0].High, prices[0].Low, prices[0].Close, prices[0].Volume}
-	_, err := m.DB.Exec(query, args...)
-	if err != nil {
-		log.Fatal(err)
+	if prices == nil {
+		return
 	}
 
-	fmt.Println("Inserted:", prices[0].TickerId)
+	var subQuery string
+	var i int
+	for i = 0; i < len(prices); i++ {
+		subQuery += fmt.Sprintf("(%d, '%s', %.3f, %.3f, %.3f, %.3f, %d),",
+			prices[i].TickerId, prices[i].Tradedate.Format("20060102"),
+			prices[i].Open, prices[i].High, prices[i].Low, prices[i].Close, prices[i].Volume)
+
+		if len(prices) == 1 || (i > 0 && i%1000 == 0) || i == len(prices)-1 {
+			subQuery = subQuery[:len(subQuery)-1]
+
+			query := `
+insert into public.daily_prices (ticker_id, tradedate, open, high, low, close, volume)
+values ` + subQuery + `
+on conflict (ticker_id, tradedate) do update
+set
+open = excluded.open,
+high = excluded.high,
+low = excluded.low,
+close = excluded.close,
+volume = excluded.volume;`
+
+			_, err := m.DB.Exec(query)
+			if err != nil {
+				fmt.Println(query)
+				log.Fatal(err)
+			}
+
+			subQuery = ""
+		}
+	}
+
+	fmt.Println("Inserted ticker_id:", prices[0].TickerId, "len(prices):", len(prices))
+
+	// ДОБАВИТЬ ТАБЛИЦУ С ДАТАМИ ПОСЛЕДНИХ ПРОВЕРОК
 }

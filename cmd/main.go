@@ -25,12 +25,13 @@ func BatchFillDailyPricesChan(c chan<- []models.DailyPrice, ticker models.Ticker
 	bRun := true
 	start := 0
 	for bRun {
+		time.Sleep(300 * time.Millisecond)
 		url := fmt.Sprintf("%s%s%s%s%s%d",
 			"http://iss.moex.com/iss/history/engines/stock/markets/shares/boards/",
 			ticker.Boardid, "/securities/", ticker.Secid,
 			".xml?iss.meta=off&history.columns=TRADEDATE,OPEN,HIGH,LOW,CLOSE,VOLUME&start=",
 			start)
-		//fmt.Println("from BatchFillDailyPricesChan:\n", url)
+		fmt.Println("from BatchFillDailyPricesChan:\n", url)
 
 		reader, err := moexreader.GetXMLByRequest(url)
 		if err != nil {
@@ -72,8 +73,8 @@ func main() {
 	timerForTickers := time.NewTicker(2 * time.Second)
 
 	// Канал и таймер для получения последней даты каждого тикера
-	chanLastTradeDates := make(chan models.Ticker)
-	timerForLastTradeDates := time.NewTicker(5 * time.Second)
+	chanLastTradeDates := make(chan models.Ticker, 10)
+	timerForLastTradeDates := time.NewTicker(2 * time.Second)
 
 	// Канал для ohlc
 	chanUpdateDailyPrices := make(chan []models.DailyPrice, 20)
@@ -96,14 +97,16 @@ func main() {
 		// Получение последней даты тикера из канала
 		case tickerLastDate, ok := <-chanLastTradeDates:
 			if ok {
+				timerForLastTradeDates = time.NewTicker(5 * time.Second)
 				if tickerLastDate.Tradedate.Before(minDate) {
-					// РЕАЛИЗОВАТЬ полную вставку
-					go BatchFillDailyPricesChan(chanUpdateDailyPrices, tickerLastDate)
+					fmt.Println(tickerLastDate)
+					// Полная вставка
+					BatchFillDailyPricesChan(chanUpdateDailyPrices, tickerLastDate)
 					//fmt.Println("Need full insert for", tickerLastDate.Id)
 				} else {
 					// Получение ohlc тикера реквестом и запись в канал
 					//go FillDailyPricesChan(chanUpdateDailyPrices, tickerLastDate)
-					fmt.Println("Need update for", tickerLastDate.Id)
+					//fmt.Println("Need update for", tickerLastDate.Id)
 				}
 			}
 		// Получение ohlc из канала и запись в базу
