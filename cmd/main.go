@@ -99,12 +99,12 @@ func main() {
 			if ok {
 				timerForLastTradeDates = time.NewTicker(5 * time.Second)
 				if tickerLastDate.Tradedate.Before(minDate) {
-					fmt.Println(tickerLastDate)
-					// Полная вставка
+					// Изначальная вставка
 					BatchFillDailyPricesChan(chanUpdateDailyPrices, tickerLastDate)
 					//fmt.Println("Need full insert for", tickerLastDate.Id)
 				} else {
 					// Получение ohlc тикера реквестом и запись в канал
+					// Вставка с определенной даты
 					//go FillDailyPricesChan(chanUpdateDailyPrices, tickerLastDate)
 					//fmt.Println("Need update for", tickerLastDate.Id)
 				}
