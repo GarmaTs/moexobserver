@@ -6,5 +6,6 @@ create table public.daily_prices (
 	low decimal(18,3) not null,
 	close  decimal(18,3) not null,
 	volume bigint not null,
+	lastcheck_date date not null,	
 	primary key(ticker_id, tradedate)
 );

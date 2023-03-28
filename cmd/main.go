@@ -20,21 +20,35 @@ import (
 const TICKERS_URL = "http://iss.moex.com/iss/history/engines/stock/markets/shares/boards/TQBR/securities.xml?iss.meta=off&history.columns=BOARDID,TRADEDATE,SHORTNAME,SECID,NUMTRADES,VALUE,VOLUME"
 
 // Получение ohlc для одного тикера
-func FillDailyPricesChan(c chan<- []models.DailyPrice, ticker models.Ticker) {
-	// Функция получает данные без старта. Это нужно доделать
-	dpUrl := "http://iss.moex.com/iss/history/engines/stock/markets/shares/boards/" + ticker.Boardid +
-		"/securities/" + ticker.Secid +
-		".xml?iss.meta=off&history.columns=TRADEDATE,OPEN,HIGH,LOW,CLOSE,VOLUME"
+func BatchFillDailyPricesChan(c chan<- []models.DailyPrice, ticker models.Ticker) {
+	var dailyPrices []models.DailyPrice
+	bRun := true
+	start := 0
+	for bRun {
+		url := fmt.Sprintf("%s%s%s%s%s%d",
+			"http://iss.moex.com/iss/history/engines/stock/markets/shares/boards/",
+			ticker.Boardid, "/securities/", ticker.Secid,
+			".xml?iss.meta=off&history.columns=TRADEDATE,OPEN,HIGH,LOW,CLOSE,VOLUME&start=",
+			start)
+		//fmt.Println("from BatchFillDailyPricesChan:\n", url)
 
-	reader, err := moexreader.GetXMLByRequest(dpUrl)
-	if err != nil {
-		fmt.Println("err:", err)
-	}
-	dailyPrices, err := dailyprices.GetDailyPrices(reader, int32(ticker.Id))
-	if err != nil {
-		fmt.Println("err:", err)
-	}
+		reader, err := moexreader.GetXMLByRequest(url)
+		if err != nil {
+			fmt.Println("err:", err)
+		}
+		tmpPrices, err := dailyprices.GetDailyPrices(reader, int32(ticker.Id))
+		if err != nil {
+			fmt.Println("err:", err)
+		}
 
+		if len(tmpPrices) == 0 || start > 20000 {
+			bRun = false
+		} else {
+			dailyPrices = append(dailyPrices, tmpPrices...)
+		}
+
+		start += 100
+	}
 	c <- dailyPrices
 }
 
@@ -59,10 +73,10 @@ func main() {
 
 	// Канал и таймер для получения последней даты каждого тикера
 	chanLastTradeDates := make(chan models.Ticker)
-	timerForLastTradeDates := time.NewTicker(2 * time.Second)
+	timerForLastTradeDates := time.NewTicker(5 * time.Second)
 
 	// Канал для ohlc
-	chanDailyPrices := make(chan []models.DailyPrice, 20)
+	chanUpdateDailyPrices := make(chan []models.DailyPrice, 20)
 	store := data.NewStore(db)
 
 	for {
@@ -80,26 +94,24 @@ func main() {
 		case <-timerForLastTradeDates.C:
 			go GetLastTradeDates(chanLastTradeDates, &store)
 		// Получение последней даты тикера из канала
-		case lastTickersDate, ok := <-chanLastTradeDates:
+		case tickerLastDate, ok := <-chanLastTradeDates:
 			if ok {
-				if lastTickersDate.Tradedate.Before(minDate) {
+				if tickerLastDate.Tradedate.Before(minDate) {
 					// РЕАЛИЗОВАТЬ полную вставку
-					fmt.Println("Need full insert for", lastTickersDate.Id)
+					go BatchFillDailyPricesChan(chanUpdateDailyPrices, tickerLastDate)
+					//fmt.Println("Need full insert for", tickerLastDate.Id)
 				} else {
-					// Получение ohlc тикера
-					go FillDailyPricesChan(chanDailyPrices, lastTickersDate)
+					// Получение ohlc тикера реквестом и запись в канал
+					//go FillDailyPricesChan(chanUpdateDailyPrices, tickerLastDate)
+					//fmt.Println("Need update for", tickerLastDate.Id)
 				}
 			}
-		// Получение ohlc из канала
-		case dailyPrices, ok := <-chanDailyPrices:
+		// Получение ohlc из канала и запись в базу
+		case dailyPrices, ok := <-chanUpdateDailyPrices:
 			if ok {
-				for _, p := range dailyPrices {
-					fmt.Println(p)
-				}
-				fmt.Println("----------------------------------------------------------------------")
+				go store.DailyPrices.Insert(dailyPrices)
 			}
 		}
-
 	}
 
 	//	XML FROM FILE
@@ -180,10 +192,11 @@ func WriteAllTickersToChan(srcUrl string, start int, c chan<- []models.Ticker) {
 			fmt.Println(err)
 			return
 		}
-		allTickers = append(allTickers, tickerSlice...)
 
 		if len(tickerSlice) == 0 || start > 10000 {
 			bRun = false
+		} else {
+			allTickers = append(allTickers, tickerSlice...)
 		}
 
 		start += 100

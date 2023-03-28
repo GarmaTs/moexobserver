@@ -14,6 +14,7 @@ type Store struct {
 	}
 	DailyPrices interface {
 		GetLastTradeDates() []models.Ticker
+		Insert(dailyPrices []models.DailyPrice)
 	}
 }
 
@@ -86,7 +87,7 @@ func (m dailyPricesModel) GetLastTradeDates() []models.Ticker {
 
 	query := `
 select
-	t.id as ticker_id, t.secid, t.boardid, COALESCE(p.tradedate, '1899-12-31')
+	t.id as ticker_id, t.secid, t.boardid, COALESCE(p.tradedate, '1899-12-31') as tradedate
 from (
 	select max(tradedate) as tradedate, p.ticker_id
 	from public.daily_prices as p
@@ -112,4 +113,8 @@ order by ticker_id;`
 	}
 
 	return tickers
+}
+
+func (m dailyPricesModel) Insert(dailyPrices []models.DailyPrice) {
+	fmt.Println(dailyPrices[0], "\n", len(dailyPrices))
 }
