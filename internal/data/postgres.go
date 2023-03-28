@@ -75,7 +75,7 @@ delete from public.tickers_import;`
 		log.Fatal(err)
 	}
 
-	fmt.Println("tickers updated")
+	//fmt.Println("tickers updated")
 }
 
 type dailyPricesModel struct {
@@ -115,6 +115,18 @@ order by ticker_id;`
 	return tickers
 }
 
-func (m dailyPricesModel) Insert(dailyPrices []models.DailyPrice) {
-	fmt.Println(dailyPrices[0], "\n", len(dailyPrices))
+func (m dailyPricesModel) Insert(prices []models.DailyPrice) {
+	//fmt.Println(dailyPrices[0], "\n", len(dailyPrices))
+	query := `
+insert into public.daily_prices 
+	(ticker_id, tradedate, open, high, low, close, volume, lastcheck_date)
+values ($1, $2, $3, $4, $5, $6, $7, date(now()));`
+
+	args := []interface{}{prices[0].TickerId, prices[0].Tradedate, prices[0].Open, prices[0].High, prices[0].Low, prices[0].Close, prices[0].Volume}
+	_, err := m.DB.Exec(query, args...)
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	fmt.Println("Inserted:", prices[0].TickerId)
 }

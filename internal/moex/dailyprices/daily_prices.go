@@ -58,6 +58,11 @@ func GetDailyPrices(in io.Reader, tickerId int32) ([]models.DailyPrice, error) {
 			Close:     close,
 			Volume:    vol,
 		}
+
+		if open == 0 && close == 0 {
+			continue
+		}
+
 		dailyPrices = append(dailyPrices, price)
 	}
 

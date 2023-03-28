@@ -103,7 +103,7 @@ func main() {
 				} else {
 					// Получение ohlc тикера реквестом и запись в канал
 					//go FillDailyPricesChan(chanUpdateDailyPrices, tickerLastDate)
-					//fmt.Println("Need update for", tickerLastDate.Id)
+					fmt.Println("Need update for", tickerLastDate.Id)
 				}
 			}
 		// Получение ohlc из канала и запись в базу
